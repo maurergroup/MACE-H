@@ -89,6 +89,14 @@ class MACEHCalculator(Calculator):
         Can be overridden per call via the ``symmetrize`` argument of
         :meth:`calculate`.  Uncertainty estimators are always evaluated
         on the raw (non-symmetrised) Hamiltonian.
+    load_model : bool
+        If True, load the model and its metadata immediately in
+        ``__init__``.  If False (default), loading is deferred until the
+        first prediction (or metadata export) that actually needs it.
+        Deferring the load is convenient in MPI setups where the
+        calculator is instantiated on every rank but only a subset of
+        ranks run predictions — those idle ranks then never pay the load
+        cost.  The load happens exactly once and is cached thereafter.
     """
 
     implemented_properties = ['hamiltonian', 'hamiltonian_uncertainty']
@@ -97,12 +105,15 @@ class MACEHCalculator(Calculator):
 
     def __init__(self, model_dir, radius=None, device='cpu', dtype='float32',
                  debug=False, uncertainty_method=None, symmetrize=False,
-                 num_threads=None, **kwargs):
+                 num_threads=None, load_model=False, **kwargs):
         super().__init__(**kwargs)
 
+        self.model_dir = model_dir
+        self._radius = radius
         self.model_device = device
         self.debug = debug
         self.symmetrize = symmetrize
+        self._model_loaded = False
 
         if num_threads is not None:
             torch.set_num_threads(int(num_threads))
@@ -123,12 +134,28 @@ class MACEHCalculator(Calculator):
             self.np_dtype = np.float32
 
         torch.set_default_dtype(self.torch_dtype)
-        self._load_model(model_dir)
-        self._setup_cutoffs(radius)
+
+        if load_model:
+            self._ensure_model_loaded()
 
     # ------------------------------------------------------------------
     # Model loading
     # ------------------------------------------------------------------
+
+    def _ensure_model_loaded(self):
+        """Load the model and per-pair cutoffs on first use.
+
+        Idempotent: the network, its metadata and the cutoff matrix are
+        loaded exactly once and reused on every subsequent call.  Loading
+        is deferred until the first prediction / metadata export unless
+        ``load_model=True`` was passed at construction time (see the class
+        docstring).
+        """
+        if self._model_loaded:
+            return
+        self._load_model(self.model_dir)
+        self._setup_cutoffs(self._radius)
+        self._model_loaded = True
 
     @staticmethod
     def _find_model_path(model_dir):
@@ -608,6 +635,8 @@ class MACEHCalculator(Calculator):
             True the stored Hamiltonian is Hermitised; uncertainty
             estimators are always evaluated on the raw prediction.
         """
+        self._ensure_model_loaded()
+
         if properties is None:
             properties = self.implemented_properties
         super().calculate(atoms, properties, system_changes)
@@ -722,6 +751,8 @@ class MACEHCalculator(Calculator):
             Structure to export.  If *None*, uses the atoms currently
             attached to the calculator.
         """
+        self._ensure_model_loaded()
+
         if atoms is None:
             if self.atoms is None:
                 raise ValueError("No atoms provided and none previously set.")
