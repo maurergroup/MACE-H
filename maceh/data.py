@@ -91,7 +91,7 @@ raw_data_dir
             self.process()
         if load_graph:
             begin = time.time()
-            loaded_data = torch.load(self.data_file)
+            loaded_data = torch.load(self.data_file, weights_only=False)
             self.data, self.slices, self.info = loaded_data
             print(f'Finish loading the processed {len(self)} structures (spinful: {self.info["spinful"]}, '
                 f'the number of atomic types: {len(self.info["index_to_Z"])}), cost {time.time() - begin:.2f} seconds')

@@ -7,3 +7,4 @@ from .e3modules import Rotate, e3TensorDecomp
 
 from .kernel import DeepHE3Kernel
 from .analyzer import testResultAnalyzer
+from .calculator import MACEHCalculator

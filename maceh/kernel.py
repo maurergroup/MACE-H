@@ -240,7 +240,7 @@ class DeepHE3Kernel:
         # load from checkpoint
         if config.checkpoint_dir:
             print(f'Loading from checkpoint at {config.checkpoint_dir}')
-            checkpoint = torch.load(config.checkpoint_dir, map_location='cpu')
+            checkpoint = torch.load(config.checkpoint_dir, map_location='cpu', weights_only=False)
             net.load_state_dict(checkpoint['state_dict'])
             if config.use_new_hypp:
                 epoch = checkpoint['epoch']
@@ -320,7 +320,7 @@ class DeepHE3Kernel:
         print('\nTraining finished.')
 
         print('\n------- Testing network on test set -------')
-        checkpoint = torch.load(os.path.join(config.save_dir, 'best_model.pkl'), map_location=config.device)
+        checkpoint = torch.load(os.path.join(config.save_dir, 'best_model.pkl'), map_location=config.device, weights_only=False)
         self.net.load_state_dict(checkpoint['state_dict'])
         print(f'Using best model at epoch {checkpoint["epoch"]} with val_loss {checkpoint["val_loss"]}')
         print(f'Testing...')
@@ -383,7 +383,7 @@ class DeepHE3Kernel:
                 dataset.set_mask(self.train_config.target_blocks, del_Aij=False, convert_to_net=self.train_config.convert_net_out)
             construct_kernel = self.register_constructor(device=eval_config.device)
             net: Net = self.load_model(os.path.join(model_path, 'src'), device=eval_config.device)
-            checkpoint = torch.load(os.path.join(model_path, 'best_model.pkl'), map_location='cpu')
+            checkpoint = torch.load(os.path.join(model_path, 'best_model.pkl'), map_location='cpu', weights_only=False)
             net.load_state_dict(checkpoint['state_dict'])
             net.eval()
             

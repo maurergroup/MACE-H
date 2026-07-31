@@ -234,7 +234,7 @@ class RevertDecayLR:
                 print('Interrupting while saving model might cause the saved model to be deprecated')
 
     def revert(self):
-        best_checkpoint = torch.load(os.path.join(self.save_model_dir, 'best_model.pkl'))
+        best_checkpoint = torch.load(os.path.join(self.save_model_dir, 'best_model.pkl'), weights_only=False)
         print(f'Reverting to epoch {best_checkpoint["epoch"]} with loss {best_checkpoint["val_loss"]}')
         self.model.load_state_dict(best_checkpoint['state_dict'])
         self.optimizer.load_state_dict(best_checkpoint['optimizer_state_dict'])
